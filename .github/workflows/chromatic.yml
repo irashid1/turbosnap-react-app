@@ -1,0 +1,44 @@
+name: 'Chromatic'
+
+# Event for the workflow
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# List of jobs
+jobs:
+  chromatic-deployment:
+    # Operating System
+    runs-on: ubuntu-latest
+    # Job steps
+    steps:
+      - uses: actions/checkout@v4
+        with:
+	  # 👇 Makes sure Chromatic can review the full git history
+          fetch-depth: 0
+          # 👇 Tells the checkout which commit hash to reference
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 23.3.0
+      # 👇 Install dependencies with the same package manager used in the project (replace it as needed), e.g. yarn, npm, pnpm
+      - name: Install dependencies
+        run: npm ci
+	
+      # 👇 Adds Chromatic as a step in the workflow
+      - name: Publish to Chromatic
+        uses: chromaui/action@latest
+        with:
+          # 👇 Chromatic projectToken, refer to the manage page to obtain it.
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          # 👇 Enable TurboSnap:
+          onlyChanged: true
+          # 👇 Add debug: true and print dependency trace for changed files to help with debugging:
+          traceChanged: 'expanded'
+          debug: true
+          exitZeroOnChanges: true # Alternatively, can use exitOnceUploaded
+          autoAcceptChanges: 'main'
+          # 👇 This makes sure Chromatic skips PR drafts (still in progress or not ready to review)
+          skip: ${{ github.event.pull_request.draft == true }}
